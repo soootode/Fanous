@@ -38,3 +38,52 @@
 [۴. تمرین خرد و بازخورد هوشمند] 
        ↓ (تثبیت مهارت در تصمیمات واقعی زندگی)
 [تکمیل گام و روشن شدن فانوس 🏮]
+در این فرایند، هوش مصنوعی پاسخ آماده نمی‌دهد؛ بلکه با طرح پرسش‌های سقراطی هدفمند، کاربر را با فرضیات پنهان و تعصبات ذهنی‌اش روبه‌رو می‌کند.
+
+---
+
+## 📚 دوره‌ها و سرفصل‌های آموزشی
+
+پلتفرم در حال حاضر شامل **۳ دوره جامع و ۲۷ سناریوی تعاملی** است:
+
+* **🧠 تفکر منطقی (۱۰ گام):** پایه استدلال درست، مغالطه هزینه هدررفته (Sunk Cost)، تعمیم شتاب‌زده، حمله شخصی، دوراهی کاذب و تفکر احتمالاتی.
+* **🔍 تفکر نقاد — مسیر شغلی (۹ گام):** انگیزه‌ی فرستنده، کشف نفع پنهان (Cui bono)، سوگیری منبع، تضاد منافع، و شکستن حباب اطلاعاتی.
+* **🌐 تفکر سیستمی (۸ گام):** مدل کوه‌یخ (Iceberg)، حلقه‌های بازخورد تقویتی/تعدیلی، تاخیرها، انتقال بار، و نقاط اهرمی در مسائل پیچیده.
+
+---
+
+## 🛠 فناوری‌های استفاده‌شده (Tech Stack)
+
+* **Backend:** Python 3.12, FastAPI (Async & Serverless Architecture)
+* **Database & ORM:** PostgreSQL (Supabase Cloud), SQLAlchemy 2.0
+* **AI Engine:** Google Gemini API (`google-genai` SDK) with custom Socratic prompt orchestration
+* **Frontend:** Vite Multi-Page Application (Vanilla JavaScript, Semantic HTML5, Custom Paper-Themed CSS Design System)
+* **Auth & Security:** JWT Token Authentication, Scoped Password Reset Tokens, Strict CORS
+* **Deployment:** Vercel (Serverless Backend & Frontend), Supabase (Transaction Pooler)
+
+---
+
+## 🚀 راهنمای نصب و اجرای محلی (Local Setup)
+
+### ۱. راه‌اندازی بک‌اند:
+```bash
+cd fanous_backend
+python -m venv venv
+
+# در ویندوز:
+venv\Scripts\activate
+# در لینوکس/مک:
+# source venv/bin/activate
+
+pip install -r requirements.txt
+
+# تنظیم متغیرهای محیطی در فایل .env
+# DATABASE_URL=sqlite:///./fanous.db
+# GEMINI_API_KEY=your_gemini_api_key
+# FANOUS_SECRET_KEY=your_secret_key
+
+# ایمپورت سناریوها در دیتابیس
+python import_scenarios.py
+
+# اجرای سرور
+uvicorn main:app --reload --port 8000
