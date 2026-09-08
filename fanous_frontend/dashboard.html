@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script>
+  // گارد فوری احراز هویت — قبل از هر رندری
+  if (!localStorage.getItem('fanous_token')) {
+    window.location.replace('auth.html?mode=login');
+  }
+</script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فانوس — داشبورد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f0e8;
+    --paper-card:rgba(255,252,244,0.7);
+    --ink:#2c2820;
+    --ink-soft:#5c5442;
+    --ink-faint:#9a8e7a;
+    --olive:#47502f;
+    --olive-deep:#363c22;
+    --flame:#e0a458;
+    --flame-soft:rgba(224,164,88,0.18);
+    --flame-border:rgba(224,164,88,0.5);
+    --grid-line:rgba(200,180,140,0.45);
+    --border:rgba(200,180,140,0.4);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size:32px 32px;
+    color:var(--ink);
+    font-family:'Vazirmatn',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:radial-gradient(ellipse at 50% 12%, rgba(255,252,240,0.7) 0%, transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* ————— ناو ————— */
+  nav{
+    position:sticky;
+    top:0; z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 44px;
+    background:rgba(245,240,232,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-logo{
+    font-size:18px;
+    font-weight:700;
+    color:var(--olive);
+    letter-spacing:0.04em;
+    text-decoration:none;
+  }
+  .nav-right{ display:flex; align-items:center; gap:18px; }
+  .nav-link{
+    font-size:13.5px;
+    color:var(--ink-faint);
+    text-decoration:none;
+    transition:color 0.2s ease;
+  }
+  .nav-link:hover{ color:var(--olive); }
+  .avatar-btn{
+    width:36px; height:36px;
+    border-radius:50%;
+    background:var(--olive-deep);
+    color:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600;
+    cursor:pointer;
+    border:none;
+    font-family:'Vazirmatn',sans-serif;
+  }
+
+  main{
+    position:relative;
+    z-index:1;
+    max-width:1080px;
+    margin:0 auto;
+    padding:52px 32px 100px;
+  }
+
+  /* ————— سربرگ خوش‌آمد ————— */
+  .greet{
+    margin-bottom:36px;
+    opacity:0;
+    transform:translateY(14px);
+    animation:fadeUp 0.6s ease forwards;
+  }
+  .greet .eyebrow{
+    font-size:12px;
+    font-weight:500;
+    letter-spacing:0.14em;
+    color:var(--flame);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    display:block;
+  }
+  .greet h1{
+    font-size:clamp(24px,3.4vw,32px);
+    font-weight:700;
+    color:var(--olive);
+    line-height:1.4;
+  }
+
+  /* ————— کارت ادامه‌ی مسیر ————— */
+  .continue-card{
+    background:rgba(255,252,244,0.94);
+    border:1.5px solid rgba(200,180,140,0.6);
+    border-radius:18px;
+    padding:24px 30px;
+    box-shadow:0 8px 26px rgba(44,40,32,0.05);
+    margin-bottom:40px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+    opacity:0;
+    transform:translateY(14px);
+    animation:fadeUp 0.6s ease 0.1s forwards;
+  }
+  .continue-info{ display:flex; align-items:center; gap:18px; }
+  .continue-icon{
+    width:52px; height:52px;
+    border-radius:14px;
+    background:rgba(224,164,88,0.16);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+    flex-shrink:0;
+  }
+  .continue-text .label{
+    font-size:12.5px;
+    color:var(--ink-faint);
+    margin-bottom:6px;
+  }
+  .continue-text h3{
+    font-size:17px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:4px;
+  }
+  .continue-text p{
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .continue-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--olive-deep);
+    color:var(--paper);
+    text-decoration:none;
+    font-size:14px;
+    font-weight:500;
+    padding:13px 26px;
+    border-radius:10px;
+    white-space:nowrap;
+    transition:background 0.25s ease, transform 0.2s ease;
+  }
+  .continue-btn:hover{ background:var(--olive); transform:translateY(-1px); }
+  .continue-card{ transition:box-shadow 0.5s ease, border-color 0.3s ease; }
+  .continue-card:hover{ box-shadow:0 12px 34px rgba(224,164,88,0.2); border-color:var(--flame-border); }
+  .continue-btn svg{ transform:scaleX(-1); }
+
+  /* ————— مسیر دوره‌ها (نقشه‌ی نوری) ————— */
+  .section-label{
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:18px;
+    padding:0 2px;
+  }
+  .courses{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .course-card{
+    position:relative;
+    background:var(--paper-card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:24px 28px;
+    display:flex;
+    align-items:center;
+    gap:22px;
+    opacity:0;
+    transform:translateY(16px);
+    animation:fadeUp 0.6s ease forwards;
+    transition:box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+  }
+  .course-card:hover{
+    box-shadow:0 10px 34px rgba(44,40,32,0.07);
+    transform:translateY(-2px);
+  }
+  .course-card:nth-child(1){ animation-delay:0.15s; }
+  .course-card:nth-child(2){ animation-delay:0.22s; }
+  .course-card:nth-child(3){ animation-delay:0.29s; }
+  .course-node{ display:none; }
+
+  .course-icon{
+    flex-shrink:0;
+    width:54px; height:54px;
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .course-icon svg{ width:26px; height:26px; }
+  .icon-logic{ background:rgba(71,80,47,0.1); }
+  .icon-critical{ background:rgba(224,164,88,0.14); }
+  .icon-systems{ background:rgba(92,84,66,0.1); }
+
+  .course-body{ flex:1; min-width:0; }
+  .course-top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .course-body h3{
+    font-size:16.5px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .course-status{
+    font-size:12px;
+    color:var(--ink-faint);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .course-status.done{ color:var(--olive); font-weight:600; }
+  .course-body p{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.7;
+    margin-bottom:14px;
+  }
+
+  .progress-row{ display:flex; align-items:center; gap:12px; }
+  .progress-track{
+    flex:1;
+    height:5px;
+    background:var(--border);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    border-radius:3px;
+    background:linear-gradient(90deg, var(--flame), var(--olive));
+  }
+  .progress-num{
+    font-size:12px;
+    color:var(--ink-faint);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  .course-action{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:44px; height:44px;
+    border-radius:50%;
+    border:1.5px solid var(--border);
+    color:var(--olive);
+    text-decoration:none;
+    transition:border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .course-action:hover{
+    border-color:var(--flame-border);
+    background:var(--flame-soft);
+    transform:translateY(-1px);
+  }
+  .course-card.locked{ opacity:0.65; }
+  .course-card.locked:hover{ box-shadow:none; transform:none; }
+  .course-action svg{ transform:scaleX(-1); }
+  .course-action.locked{
+    color:var(--ink-faint);
+    cursor:default;
+    pointer-events:none;
+  }
+
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(16px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  @media (max-width:640px){
+    nav{ padding:14px 18px; }
+    main{ padding:36px 18px 90px; }
+    .continue-card{
+      flex-direction:column;
+      align-items:stretch;
+      text-align:center;
+      padding:26px 22px;
+    }
+    .continue-info{ flex-direction:column; text-align:center; }
+    .continue-btn{ justify-content:center; }
+    .course-card{ flex-wrap:wrap; padding:22px 20px; }
+    .course-top{ flex-direction:column; align-items:flex-start; gap:2px; }
+    .course-action{ margin-right:auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">فانوس</a>
+  <div class="nav-right">
+    <a class="nav-link" href="about.html">درباره فانوس</a>
+    <a class="avatar-btn" href="profile.html" id="avatarBtn" title="حساب کاربری" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">ف</a>
+  </div>
+</nav>
+
+<main>
+
+  <div class="greet">
+    <span class="eyebrow">داشبورد</span>
+    <h1 id="greetHeading">سلام 👋<br>امروز کجا ادامه می‌دیم؟</h1>
+  </div>
+
+  <!-- ادامه‌ی مسیر فعلی -->
+  <a href="scenario.html" id="continueLink" style="text-decoration:none;color:inherit;display:none;">
+  <div class="continue-card">
+    <div class="continue-info">
+      <div class="continue-icon">
+        <svg width="26" height="26" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="26" cy="26" r="18" stroke="#47502f" stroke-width="1.3"/>
+          <path d="M26 10 L26 14M26 38 L26 42M10 26 L14 26M38 26 L42 26" stroke="#47502f" stroke-width="1.1" stroke-linecap="round" opacity="0.5"/>
+          <path d="M33 19 L23 23 L19 33 L29 29 Z" fill="#e0a458" opacity="0.9" stroke="#47502f" stroke-width="0.8" stroke-linejoin="round"/>
+          <circle cx="26" cy="26" r="2" fill="#2c2820"/>
+        </svg>
+      </div>
+      <div class="continue-text">
+        <div class="label">ادامه‌ی مسیر</div>
+        <h3 id="continueTitle">—</h3>
+        <p id="continueSub">—</p>
+      </div>
+    </div>
+    <span class="continue-btn">
+      <span>ادامه بده</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </span>
+  </div>
+  </a>
+
+  <!-- دوره‌ها -->
+  <div class="section-label">دوره‌های تو</div>
+  <div class="courses" id="coursesList">
+    <p style="color:var(--ink-faint);font-size:13.5px;">در حال بارگذاری دوره‌ها...</p>
+  </div>
+
+</main>
+
+<script>
+  var API_BASE = 'https://fanous-backend.vercel.app';
+  function getToken(){ return localStorage.getItem('fanous_token'); }
+  function clearToken(){ localStorage.removeItem('fanous_token'); }
+
+  var token = getToken();
+  // ریدایرکت نبودن توکن در ابتدای <head> انجام می‌شود — اینجا فقط برای فراخوانی‌های API خوانده می‌شود
+
+  // آیکون هر دوره بر اساس slug — همون آیکون‌های دست‌کشیده‌ای که قبلاً داشتیم
+  var COURSE_ICON = {
+    'logical-thinking': {
+      cls: 'icon-logic',
+      svg: '<svg viewBox="0 0 52 52" fill="none"><path d="M16 20 L26 12 L36 20 L36 32 L26 40 L16 32 Z" stroke="#47502f" stroke-width="1.3" stroke-linejoin="round"/><path d="M26 12 L26 24 M16 20 L26 24 M36 20 L26 24 M16 32 L26 24 M36 32 L26 24 M26 40 L26 24" stroke="#47502f" stroke-width="1" opacity="0.45"/><circle cx="26" cy="24" r="2.6" fill="#e0a458"/></svg>'
+    },
+    'critical-thinking-career': {
+      cls: 'icon-critical',
+      svg: '<svg viewBox="0 0 52 52" fill="none"><path d="M18 26 Q26 14 34 26 Q26 38 18 26Z" fill="none" stroke="#47502f" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="26" r="3" fill="#e0a458"/></svg>'
+    },
+    'systems-thinking': {
+      cls: 'icon-systems',
+      svg: '<svg viewBox="0 0 52 52" fill="none"><circle cx="16" cy="16" r="4" stroke="#5c5442" stroke-width="1.2"/><circle cx="36" cy="16" r="4" stroke="#5c5442" stroke-width="1.2"/><circle cx="26" cy="36" r="4" stroke="#5c5442" stroke-width="1.2"/><path d="M19.5 17.5 L23 33 M32.5 17.5 L29 33 M20 16 L32 16" stroke="#5c5442" stroke-width="1" opacity="0.5"/></svg>'
+    }
+  };
+
+  function authedFetch(path, options){
+    options = options || {};
+    options.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, options.headers || {});
+    return fetch(API_BASE + path, options).then(function(res){
+      if(res.status === 401){
+        clearToken();
+        window.location.href = 'auth.html?mode=login';
+        throw new Error('unauthorized');
+      }
+      return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+    });
+  }
+
+  function toPersianDigits(n){ return String(n).replace(/\d/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+
+  var COURSE_ORDER = ['logical-thinking', 'critical-thinking-career', 'systems-thinking'];
+
+  function sortCourses(courses){
+    return courses.slice().sort(function(a, b){
+      return COURSE_ORDER.indexOf(a.slug) - COURSE_ORDER.indexOf(b.slug);
+    });
+  }
+
+  function renderCourses(courses, continueCourse){
+    var container = document.getElementById('coursesList');
+    container.innerHTML = '';
+
+    var ordered = sortCourses(courses);
+
+    ordered.forEach(function(c, i){
+      var icon = COURSE_ICON[c.slug] || COURSE_ICON['logical-thinking'];
+      var pct = c.total_steps ? Math.round((c.current_step_order / c.total_steps) * 100) : 0;
+      var completed = c.current_step_order >= c.total_steps;
+      var locked = false;
+      if(i > 0){
+        var prev = ordered[i - 1];
+        var prevCompleted = prev.current_step_order >= prev.total_steps;
+        if(!prevCompleted){ locked = true; }
+      }
+      var statusText;
+      if(locked){
+        statusText = '🔒 قفل — نیاز به اتمام دوره قبل';
+      } else if(c.current_step_order === 0){
+        statusText = 'هنوز شروع نشده';
+      } else if(completed){
+        statusText = 'تموم شده';
+      } else {
+        statusText = 'گام ' + toPersianDigits(c.current_step_order) + ' از ' + toPersianDigits(c.total_steps);
+      }
+      var nextStep = completed ? c.total_steps : (c.current_step_order + 1);
+      var litClass = completed ? 'lit' : (c.current_step_order > 0 ? 'active' : '');
+      var cardClasses = 'course-card ' + litClass + (locked ? ' locked' : '');
+
+      var el = document.createElement('div');
+      el.className = cardClasses;
+      var actionHtml;
+      if(locked){
+        actionHtml =
+          '<span class="course-action locked" title="قفل">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+          '</span>';
+      } else {
+        actionHtml =
+          '<a class="course-action" href="scenario.html?course=' + c.slug + '&step=' + nextStep + '" title="ادامه">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>' +
+          '</a>';
+      }
+      el.innerHTML =
+        '<div class="course-icon ' + icon.cls + '">' + icon.svg + '</div>' +
+        '<div class="course-body">' +
+          '<div class="course-top"><h3>' + c.title + '</h3><span class="course-status">' + statusText + '</span></div>' +
+          '<p>' + c.description + '</p>' +
+          '<div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + pct + '%"></div></div><span class="progress-num">٪' + toPersianDigits(pct) + '</span></div>' +
+        '</div>' +
+        actionHtml;
+      container.appendChild(el);
+    });
+
+    if(continueCourse){
+      document.getElementById('continueLink').style.display = 'block';
+      document.getElementById('continueTitle').textContent = continueCourse.title;
+      var stepNum = continueCourse.current_step_order + 1;
+      document.getElementById('continueSub').textContent =
+        'گام ' + toPersianDigits(stepNum) + ' از ' + toPersianDigits(continueCourse.total_steps) + ' · جایی که ول کردیش';
+      document.getElementById('continueLink').href = 'scenario.html?course=' + continueCourse.slug + '&step=' + stepNum;
+    }
+  }
+
+  authedFetch('/auth/me').then(function(result){
+    if(result.ok){
+      var fullName = result.data.name || '';
+      var firstName = fullName.trim().split(/\s+/)[0] || '';
+      document.getElementById('greetHeading').innerHTML = 'سلام، ' + firstName + ' 👋<br>امروز کجا ادامه می‌دیم؟';
+      var avatarBtn = document.getElementById('avatarBtn');
+      if(avatarBtn && firstName){ avatarBtn.textContent = firstName.charAt(0); }
+    }
+  });
+
+  authedFetch('/courses').then(function(result){
+    if(!result.ok){
+      document.getElementById('coursesList').innerHTML = '<p style="color:var(--ink-faint);font-size:13.5px;">مشکلی تو گرفتن دوره‌ها پیش اومد.</p>';
+      return;
+    }
+    renderCourses(result.data.courses, result.data.continue_course);
+  }).catch(function(){
+    document.getElementById('coursesList').innerHTML = '<p style="color:var(--ink-faint);font-size:13.5px;">اتصال به سرور برقرار نشد — مطمئن شو بک‌اند روشنه (uvicorn app.main:app --reload).</p>';
+  });
+</script>
+
+</body>
+</html>

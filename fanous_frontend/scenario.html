@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script>
+  // گارد فوری احراز هویت — قبل از هر رندری
+  if (!localStorage.getItem('fanous_token')) {
+    window.location.replace('auth.html?mode=login');
+  }
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+<title>فانوس — تفکر نقاد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f0e8;
+    --paper-card:rgba(255,252,244,0.7);
+    --ink:#2c2820;
+    --ink-soft:#5c5442;
+    --ink-faint:#9a8e7a;
+    --olive:#47502f;
+    --olive-deep:#363c22;
+    --flame:#e0a458;
+    --flame-soft:rgba(224,164,88,0.18);
+    --flame-border:rgba(224,164,88,0.5);
+    --grid-line:rgba(200,180,140,0.45);
+    --border:rgba(200,180,140,0.4);
+    --danger:#b5533f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size:32px 32px;
+    color:var(--ink);
+    font-family:'Vazirmatn',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:radial-gradient(ellipse at 50% 15%, rgba(255,252,240,0.7) 0%, transparent 60%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .listening-glow{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse at 32% 40%, rgba(224,164,88,0.10) 0%, transparent 62%);
+    opacity:0;
+    transition:opacity 1.1s ease;
+  }
+  .listening-glow.active{ opacity:1; }
+
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 40px;
+    background:rgba(245,240,232,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:18px;
+    font-weight:700;
+    color:var(--olive);
+    letter-spacing:0.04em;
+  }
+
+  .progress-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    min-width:220px;
+  }
+  .progress-label{
+    font-size:12.5px;
+    color:var(--ink-faint);
+    display:flex;
+    gap:14px;
+  }
+  .progress-label b{ color:var(--ink-soft); font-weight:600; }
+  .progress-track{
+    width:100%;
+    height:3px;
+    background:var(--border);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--flame), var(--olive));
+    border-radius:3px;
+    transition:width 0.8s ease;
+  }
+
+  .exit-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+    background:none;
+    border:1px solid var(--border);
+    border-radius:50px;
+    padding:8px 18px;
+    cursor:pointer;
+    font-family:'Vazirmatn',sans-serif;
+    text-decoration:none;
+    transition:border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .exit-btn:hover{ border-color:var(--danger); color:var(--danger); background:rgba(181,83,63,0.06); }
+
+  .layout{
+    position:relative;
+    z-index:1;
+    max-width:1280px;
+    margin:0 auto;
+    padding:36px 40px 80px;
+    display:grid;
+    grid-template-columns:1.65fr 1fr;
+    gap:24px;
+    align-items:start;
+  }
+
+  /* ── کارت اصلی سناریو ── */
+  .scenario-card{
+    background:var(--paper-card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:40px 42px;
+    opacity:0;
+    transform:translateY(14px);
+    animation:fadeUp 0.6s ease 0.05s forwards;
+  }
+  .tag-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--ink-faint);
+    margin-bottom:22px;
+  }
+  .scenario-card h1{
+    font-size:26px;
+    line-height:1.65;
+    font-weight:700;
+    color:var(--olive);
+    margin-bottom:24px;
+  }
+  .scenario-card .body-text{
+    font-size:15.5px;
+    line-height:2;
+    color:var(--ink-soft);
+    margin-bottom:26px;
+  }
+  .sep{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin:28px 0;
+    color:var(--flame);
+    font-size:11px;
+  }
+  .sep::before, .sep::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:linear-gradient(to left, transparent, var(--border), transparent);
+  }
+  .prompt-heading{
+    font-size:17.5px;
+    font-weight:700;
+    color:var(--olive);
+    margin-bottom:8px;
+  }
+  .prompt-sub{
+    font-size:13.5px;
+    color:var(--ink-faint);
+    margin-bottom:16px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  /* ── مراحل: نمایش تک‌مرحله‌ای (Single-Active-Stage) ──
+     فقط بخش دارای کلاس active-stage نمایش داده می‌شود؛
+     بقیه‌ی مراحل کاملاً پنهان‌اند (نه جمع‌شده، نه کم‌رنگ). */
+  .stage-section{
+    display:none;
+  }
+  .stage-section.active-stage{
+    display:block;
+    animation:fadeUp 0.4s ease forwards;
+    scroll-margin-top:84px;
+  }
+
+  /* ── کارت پرسش سقراطی با درخشش ── */
+  .socratic-card{
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(135deg, rgba(255,252,244,0.95), rgba(250,240,222,0.85));
+    border:1px solid var(--flame-border);
+    border-radius:14px;
+    padding:26px 28px;
+    margin-bottom:8px;
+  }
+  .socratic-card.glowing{ animation:socraticGlow 2.4s ease-in-out infinite; }
+  @keyframes socraticGlow{
+    0%,100%{ box-shadow:0 0 14px rgba(224,164,88,0.18), inset 0 0 18px rgba(224,164,88,0.05); }
+    50%{ box-shadow:0 0 34px rgba(224,164,88,0.42), inset 0 0 26px rgba(224,164,88,0.10); }
+  }
+  .socratic-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--flame);
+    letter-spacing:0.03em;
+    margin-bottom:14px;
+  }
+  .socratic-question{
+    font-size:15.5px;
+    line-height:2.05;
+    font-weight:500;
+    color:var(--ink);
+  }
+
+  /* ── حباب نقل‌قول — پاسخ قبلی کاربر برای پیوستگی گفتگو ── */
+  .context-quote{
+    background:rgba(255,252,244,0.65);
+    border:1px dashed var(--border);
+    border-radius:12px;
+    padding:12px 16px;
+    margin-bottom:14px;
+  }
+  .context-quote .context-quote-label{
+    display:block;
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-faint);
+    letter-spacing:0.03em;
+    margin-bottom:4px;
+  }
+  .context-quote p{
+    font-size:13.5px;
+    line-height:1.85;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
+  /* ── کارت درس — لحظه‌ی آها! ── */
+  .lesson-card{
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(150deg, rgba(71,80,47,0.94), rgba(54,60,34,0.96));
+    border:1px solid rgba(71,80,47,0.9);
+    border-radius:16px;
+    padding:32px 32px 28px;
+    margin-bottom:8px;
+  }
+  .lesson-card .lesson-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-size:12px;
+    font-weight:600;
+    color:var(--flame);
+    letter-spacing:0.05em;
+    background:rgba(224,164,88,0.12);
+    border:1px solid rgba(224,164,88,0.35);
+    border-radius:50px;
+    padding:5px 14px;
+    margin-bottom:18px;
+  }
+  .lesson-card h2{
+    font-size:21px;
+    font-weight:800;
+    color:#f7f2e6;
+    margin-bottom:12px;
+    line-height:1.7;
+  }
+  .lesson-card .lesson-summary{
+    font-size:14px;
+    line-height:1.95;
+    color:var(--flame);
+    margin-bottom:16px;
+    font-weight:500;
+    white-space:pre-line;
+  }
+  .lesson-card .lesson-body{
+    font-size:14.5px;
+    line-height:2.05;
+    color:#f7f2e6;
+    white-space:pre-line;
+  }
+  /* دکمه‌ی ادامه — روی کارت تیره زیتونی */
+  .lesson-card .send-btn{
+    background:var(--flame);
+    color:#3a2f1d;
+    margin-top:22px;
+    font-weight:600;
+  }
+  .lesson-card .send-btn:hover{ background:#ecb877; }
+  .lesson-spark{
+    position:absolute;
+    top:-30px; left:-30px;
+    width:150px; height:150px;
+    opacity:0.10;
+    pointer-events:none;
+  }
+
+  /* ── ورودی پاسخ ── */
+  textarea.response-input{
+    width:100%;
+    min-height:140px;
+    resize:vertical;
+    background:rgba(255,252,244,0.9);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px 18px;
+    color:var(--ink);
+    font-family:'Vazirmatn',sans-serif;
+    font-size:15px;
+    line-height:1.9;
+    outline:none;
+    transition:border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  textarea.response-input::placeholder{ color:var(--ink-faint); }
+  textarea.response-input:focus{
+    border-color:rgba(200,180,140,0.65);
+    box-shadow:0 1px 0 rgba(224,164,88,0.35);
+  }
+
+  .response-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:14px;
+  }
+  .char-count{ font-size:12.5px; color:var(--ink-faint); }
+  .char-count.warn{ color:var(--flame); }
+
+  .send-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--olive-deep);
+    color:var(--paper);
+    border:none;
+    border-radius:10px;
+    padding:12px 26px;
+    font-size:14.5px;
+    font-weight:500;
+    font-family:'Vazirmatn',sans-serif;
+    cursor:pointer;
+    letter-spacing:0.02em;
+    text-decoration:none;
+    transition:background 0.25s ease, transform 0.15s ease;
+  }
+  .send-btn:hover{ background:var(--olive); }
+  .send-btn:active{ transform:scale(0.98); }
+  .send-btn:disabled{ opacity:0.4; cursor:default; }
+  .send-btn svg{ transform:scaleX(-1); }
+  .send-btn.secondary{
+    background:transparent;
+    color:var(--olive-deep);
+    border:1px solid var(--border);
+  }
+  .send-btn.secondary:hover{ border-color:var(--olive); background:rgba(71,80,47,0.06); }
+
+  .hint-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:10px;
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+  .kbd{
+    background:rgba(255,252,244,0.9);
+    border:1px solid var(--border);
+    border-radius:5px;
+    padding:1px 7px;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+
+  /* ── ستون کنار: نقشه‌ی فازها ── */
+  .side-col{ display:flex; flex-direction:column; gap:20px; position:sticky; top:92px; }
+
+  .phase-map{
+    background:var(--paper-card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:26px 24px;
+    opacity:0;
+    transform:translateY(14px);
+    animation:fadeUp 0.6s ease 0.15s forwards;
+  }
+  .phase-map-title{
+    font-size:12.5px;
+    color:var(--ink-faint);
+    margin-bottom:16px;
+  }
+  .phase-item{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:9px 0;
+    font-size:13.5px;
+    color:var(--ink-faint);
+    transition:color 0.35s ease;
+  }
+  .phase-dot{
+    width:24px; height:24px;
+    border-radius:50%;
+    border:1.5px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11.5px;
+    flex-shrink:0;
+    transition:all 0.35s ease;
+    background:transparent;
+  }
+  .phase-item.active{ color:var(--olive-deep); font-weight:700; }
+  .phase-item.active .phase-dot{
+    border-color:var(--flame);
+    color:var(--flame);
+    background:var(--flame-soft);
+    box-shadow:0 0 10px rgba(224,164,88,0.35);
+  }
+  .phase-item.done{ color:var(--olive); }
+  .phase-item.done .phase-dot{
+    border-color:var(--olive);
+    background:rgba(71,80,47,0.08);
+    color:var(--olive);
+  }
+
+  .path-item{
+    background:var(--paper-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:15px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    text-decoration:none;
+    opacity:0;
+    transform:translateY(14px);
+    animation:fadeUp 0.5s ease 0.25s forwards;
+  }
+  .path-item .step-title{ font-size:13.5px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+  .path-item .step-sub{ font-size:12.5px; color:var(--ink-faint); }
+  .step-check{
+    width:27px; height:27px;
+    border-radius:50%;
+    border:1.5px solid var(--olive);
+    color:var(--olive);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    background:rgba(71,80,47,0.06);
+  }
+
+  /* ── کارت پایان گام ── */
+  .done-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:18px;
+  }
+
+  .error-banner{
+    display:none;
+    background:rgba(181,83,63,0.08);
+    border:1px solid rgba(181,83,63,0.35);
+    color:var(--danger);
+    border-radius:10px;
+    padding:12px 16px;
+    font-size:13.5px;
+    margin-top:14px;
+  }
+  .error-banner.show{ display:block; animation:fadeUp 0.4s ease forwards; }
+
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .mobile-composer{ display:none; }
+
+  @media (max-width: 860px){
+    .topbar{ padding:14px 16px; }
+    .brand{ font-size:16px; }
+    .progress-wrap{ min-width:0; flex:1; max-width:150px; }
+    .progress-label{ font-size:10.5px; gap:8px; justify-content:center; }
+    .exit-btn{ padding:6px 12px; font-size:12px; }
+    .exit-btn span.txt{ display:none; }
+
+    .layout{
+      grid-template-columns:1fr;
+      padding:16px;
+      padding-bottom:210px;
+      gap:16px;
+    }
+    .side-col{ order:2; position:static; }
+    .scenario-card{ order:1; padding:26px 22px; }
+    .scenario-card h1{ font-size:20px; }
+    .scenario-card .body-text{ font-size:14.5px; line-height:1.9; }
+
+    .desktop-composer{ display:none !important; }
+    .prompt-heading, .prompt-sub, .sep{ display:none; }
+
+    .stage-section.active-stage{ scroll-margin-top:70px; scroll-margin-bottom:200px; }
+    .socratic-card{ padding:20px 18px; }
+    .socratic-question{ font-size:14.5px; }
+    .context-quote{ padding:10px 12px; margin-bottom:10px; }
+    .context-quote p{ font-size:12.5px; }
+    .lesson-card{ padding:24px 20px; }
+    .lesson-card h2{ font-size:18px; }
+
+    .mobile-composer{
+      display:block;
+      position:fixed;
+      bottom:0; right:0; left:0;
+      background:rgba(245,240,232,0.92);
+      backdrop-filter:blur(10px);
+      border-top:1px solid var(--border);
+      padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+      z-index:60;
+    }
+    .mobile-composer.hidden-mobile{ display:none; }
+    .mobile-composer-inner{
+      display:flex;
+      align-items:flex-end;
+      gap:10px;
+      background:rgba(255,252,244,0.95);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:8px 10px 8px 8px;
+      transition:border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .mobile-composer-inner:focus-within{
+      border-color:var(--flame-border);
+      box-shadow:0 0 0 3px var(--flame-soft);
+    }
+    textarea.mobile-input{
+      flex:1;
+      background:none;
+      border:none;
+      outline:none;
+      resize:none;
+      color:var(--ink);
+      font-family:'Vazirmatn',sans-serif;
+      font-size:15px;
+      line-height:1.6;
+      max-height:120px;
+      overflow-y:auto;
+      padding:8px 4px;
+    }
+    textarea.mobile-input::placeholder{ color:var(--ink-faint); }
+    .mobile-send{
+      flex-shrink:0;
+      width:38px; height:38px;
+      border-radius:50%;
+      background:var(--olive-deep);
+      border:none;
+      display:flex; align-items:center; justify-content:center;
+      color:var(--paper);
+      cursor:pointer;
+      transition:background 0.2s ease, transform 0.15s ease;
+    }
+    .mobile-send:hover:not(:disabled){ background:var(--olive); }
+    .mobile-send:disabled{ opacity:0.35; }
+    .mobile-send svg{ transform:scaleX(-1); }
+    .mobile-char-count{
+      text-align:left;
+      font-size:11px;
+      color:var(--ink-faint);
+      padding:4px 6px 0;
+    }
+    .mobile-composer{ transition:bottom 0.2s ease; }
+    .done-actions{ flex-direction:column; }
+    .done-actions .send-btn{
+      flex:1;
+      min-height:48px;
+      justify-content:center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="listening-glow" id="listeningGlow"></div>
+
+<div class="topbar">
+  <a href="dashboard.html" class="exit-btn"><span class="txt">خروج</span><span>×</span></a>
+  <div class="progress-wrap">
+    <div class="progress-label"><span id="courseTitleLabel">…</span><b id="stepCountLabel">…</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <div class="brand"><span>فانوس</span></div>
+</div>
+
+<div class="layout">
+
+  <!-- ═══════════ ستون اصلی: سناریو و فازها ═══════════ -->
+  <div class="scenario-card">
+    <div class="tag-row">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span id="tagLabel">سناریو — لحظه تصمیم</span>
+    </div>
+
+    <h1 id="scenarioTitle">در حال بارگذاری سناریو...</h1>
+    <p class="body-text" id="scenarioBody"></p>
+
+    <!-- ─── فاز ۱: سناریو و پاسخ اولیه ─── -->
+    <div class="stage-section active-stage" id="stageInitial">
+      <div class="sep">◆</div>
+      <h3 class="prompt-heading" id="promptHeading">چه می‌کنی؟</h3>
+      <p class="prompt-sub">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        پاسخ خودت رو با کلمات خودت بنویس — گزینه‌ی از پیش آماده‌ای وجود نداره.
+      </p>
+      <div class="desktop-composer">
+        <textarea class="response-input" id="desktopInitial" data-phase="1" placeholder="پاسخ خودمانی و اولیه‌ات را در ۱ یا ۲ جمله بنویس..." maxlength="1500"></textarea>
+        <div class="response-footer">
+          <span class="char-count" id="countInitial">۰ / ۱۵۰۰</span>
+          <button class="send-btn" id="btnInitial" disabled data-phase="1">
+            <span>ارسال پاسخ</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+        <div class="hint-row"><span class="kbd">Ctrl</span><span>+</span><span class="kbd">Enter</span><span>برای ارسال سریع</span></div>
+      </div>
+    </div>
+
+    <!-- ─── فاز ۲: پرسش سقراطی ─── -->
+    <div class="stage-section" id="stageSocratic">
+      <div class="sep">◆</div>
+      <div class="context-quote" id="initialContextQuote" style="display:none;">
+        <span class="context-quote-label">پاسخ اول شما</span>
+        <p id="initialContextText"></p>
+      </div>
+      <div class="socratic-card glowing" id="socraticCard">
+        <div class="socratic-label">
+          <svg width="17" height="17" viewBox="0 0 52 52" fill="none"><path d="M18 26 Q26 14 34 26 Q26 38 18 26Z" fill="none" stroke="#e0a458" stroke-width="2" stroke-linecap="round"/><circle cx="26" cy="26" r="3" fill="#e0a458"/></svg>
+          <span>پرسش فانوس</span>
+        </div>
+        <p class="socratic-question" id="socraticQuestion"></p>
+      </div>
+      <h3 class="prompt-heading" style="margin-top:20px;">حالا عمیق‌تر فکر کن...</h3>
+      <p class="prompt-sub">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        به پرسش فانوس جواب بده — جواب درست وجود نداره، فقط فکر کردن مهمه.
+      </p>
+      <div class="desktop-composer">
+        <textarea class="response-input" id="desktopFollowup" data-phase="2" placeholder="پاسخت رو به پرسش فانوس بنویس..." maxlength="1500"></textarea>
+        <div class="response-footer">
+          <span class="char-count" id="countFollowup">۰ / ۱۵۰۰</span>
+          <button class="send-btn" id="btnFollowup" disabled data-phase="2">
+            <span>ارسال پاسخ دوم</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── فاز ۳: باز شدن درس (لحظه‌ی آها) ─── -->
+    <div class="stage-section" id="stageLesson">
+      <div class="sep">◆</div>
+      <!-- واکنشِ AI به پاسخ دوم کاربر — قبلاً این پاسخ در چاه سیاه دفن می‌شد -->
+      <div class="socratic-card" id="socraticFollowupCard" style="margin-bottom: 20px; display: none;">
+        <div class="socratic-label">
+          <svg width="17" height="17" viewBox="0 0 52 52" fill="none"><path d="M18 26 Q26 14 34 26 Q26 38 18 26Z" fill="none" stroke="#e0a458" stroke-width="2" stroke-linecap="round"/><circle cx="26" cy="26" r="3" fill="#e0a458"/></svg>
+          <span>تحلیل فانوس از پاسخ شما</span>
+        </div>
+        <p class="socratic-question" id="socraticFollowupReaction"></p>
+      </div>
+      <div class="sep">✦ لحظه‌ی آها!</div>
+      <div class="lesson-card" id="lessonCard">
+        <svg class="lesson-spark" viewBox="0 0 100 100" fill="none" stroke="#e0a458" stroke-width="1.2">
+          <path d="M50 5 L56 38 L90 44 L62 62 L70 95 L50 74 L30 95 L38 62 L10 44 L44 38 Z"/>
+        </svg>
+        <div class="lesson-eyebrow">
+          <span>💡 درس این لحظه</span>
+        </div>
+        <h2 id="lessonTitle"></h2>
+        <p class="lesson-summary" id="lessonSummary"></p>
+        <p class="lesson-body" id="lessonBody"></p>
+        <button class="send-btn" id="btnGoToExercise"><span>متوجه شدم — رفتن به تمرین ✦</span></button>
+      </div>
+    </div>
+
+    <!-- ─── فاز ۴: تمرین خرد ─── -->
+    <div class="stage-section" id="stageExercise">
+      <div class="sep">◆</div>
+      <h3 class="prompt-heading">تمرین خرد — مال خودت</h3>
+      <p class="prompt-sub">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span id="exercisePromptInline"></span>
+      </p>
+      <div class="desktop-composer">
+        <textarea class="response-input" id="desktopExercise" data-phase="4" placeholder="یک اقدام مشخص و عملی برای این هفته در یک جمله بنویس..." maxlength="1500"></textarea>
+        <div class="response-footer">
+          <span class="char-count" id="countExercise">۰ / ۱۵۰۰</span>
+          <button class="send-btn" id="btnExercise" disabled data-phase="4">
+            <span>ثبت تمرین و اتمام گام</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── فاز ۵: کامل شد — جشن ─── -->
+    <div class="stage-section" id="stageDone">
+      <div class="sep">✦</div>
+      <h3 class="prompt-heading">این گام هم روشن شد 🏮</h3>
+      <!-- سنتزِ گرم فانوس روی تمرین خرد — بستن حلقه‌ی یادگیری -->
+      <div class="socratic-card" id="exerciseReactionCard" style="margin: 18px 0; display: none;">
+        <div class="socratic-label">
+          <svg width="17" height="17" viewBox="0 0 52 52" fill="none"><path d="M18 26 Q26 14 34 26 Q26 38 18 26Z" fill="none" stroke="#e0a458" stroke-width="2" stroke-linecap="round"/><circle cx="26" cy="26" r="3" fill="#e0a458"/></svg>
+          <span>فانوس تمرینت رو خوند</span>
+        </div>
+        <p class="socratic-question" id="exerciseReactionText"></p>
+      </div>
+      <p class="prompt-sub">پاسخ‌هات ثبت شد؛ پیشرفتت آپدیت شد.</p>
+      <div class="done-actions">
+        <a class="send-btn" id="nextStepBtn" href="#" style="display:none;"><span>گام بعدی ←</span></a>
+        <a class="send-btn secondary" href="dashboard.html"><span>بازگشت به داشبورد</span></a>
+      </div>
+    </div>
+
+    <div class="error-banner" id="errorBanner"></div>
+  </div>
+
+  <!-- ═══════════ ستون کنار: نقشه‌ی فازها ═══════════ -->
+  <div class="side-col">
+    <div class="phase-map">
+      <div class="phase-map-title">مسیر این گام — چهار ایستگاه</div>
+      <div class="phase-item" id="ph1"><div class="phase-dot">۱</div><div>سناریو و نگاه اول</div></div>
+      <div class="phase-item" id="ph2"><div class="phase-dot">۲</div><div>پرسش سقراطی</div></div>
+      <div class="phase-item" id="ph3"><div class="phase-dot">۳</div><div>درس — لحظه‌ی آها</div></div>
+      <div class="phase-item" id="ph4"><div class="phase-dot">۴</div><div>تمرین خرد شخصی</div></div>
+    </div>
+
+    <a href="dashboard.html" style="text-decoration:none;">
+      <div class="path-item">
+        <div>
+          <div class="step-title">بازگشت به داشبورد</div>
+          <div class="step-sub">مسیر کامل و پیشرفتت رو اونجا ببین</div>
+        </div>
+        <div class="step-check">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>
+
+<!-- ═══════════ کامپوزر موبایل (چسبیده به پایین) ═══════════ -->
+<div class="mobile-composer" id="mobileComposer">
+  <div class="mobile-composer-inner">
+    <textarea class="mobile-input" id="mobileInput" rows="1" placeholder="پاسخت رو بنویس..." maxlength="1500" enterkeyhint="enter" autocomplete="off"></textarea>
+    <button class="mobile-send" id="mobileSend" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+  <div class="mobile-char-count" id="mobileCount">۰ / ۱۵۰۰</div>
+</div>
+
+<script>
+  // ۱. آدرس بک‌اند زنده روی ورسل
+  var API_BASE = 'https://fanous-backend.vercel.app';
+
+  function getToken(){ return localStorage.getItem('fanous_token'); }
+  function clearToken(){ localStorage.removeItem('fanous_token'); }
+
+  var token = getToken();
+  // ریدایرکت نبودن توکن در ابتدای <head> انجام می‌شود — اینجا فقط برای فراخوانی‌های API خوانده می‌شود
+
+  var params = new URLSearchParams(window.location.search);
+  var courseSlug = params.get('course') || 'critical-thinking-career';
+  var stepOrder = parseInt(params.get('step') || '1', 10);
+
+  // ماشین حالت چرخه‌ی ۴ فازی
+  var state = {
+    step: null,
+    totalSteps: 8,
+    phase: 1,          // 1..4 (۵ فقط برای نمایش صفحه‌ی پایان است، در نقشه‌ی فاز لحاظ نمی‌شود)
+    completed: false,
+    busy: false
+  };
+
+  function authedFetch(path, options){
+    options = options || {};
+    options.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, options.headers || {});
+    return fetch(API_BASE + path, options).then(function(res){
+      if(res.status === 401){
+        clearToken();
+        window.location.href = 'auth.html?mode=login';
+        throw new Error('unauthorized');
+      }
+      return res.json().then(function(data){ return { ok: res.ok, status: res.status, data: data }; });
+    });
+  }
+
+  function toPersianDigits(n){ return String(n).replace(/\d/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+
+  function $(id){ return document.getElementById(id); }
+
+  function showError(msg){
+    var banner = $('errorBanner');
+    banner.textContent = msg;
+    banner.classList.add('show');
+  }
+  function hideError(){ $('errorBanner').classList.remove('show'); }
+
+  /* ───────── بارگذاری و ازسرگیری وضعیت ───────── */
+
+  function loadStep(){
+    Promise.all([
+      authedFetch('/courses'),
+      authedFetch('/courses/' + courseSlug + '/steps/' + stepOrder)
+    ]).then(function(results){
+      var coursesResult = results[0], stepResult = results[1];
+
+      if(!stepResult.ok){
+        $('scenarioTitle').textContent = 'این سناریو پیدا نشد.';
+        $('scenarioBody').textContent = (stepResult.data && stepResult.data.detail) || '';
+        return;
+      }
+
+      state.step = stepResult.data;
+
+      var course = (coursesResult.data.courses || []).find(function(c){ return c.slug === courseSlug; });
+      state.totalSteps = course ? course.total_steps : state.totalSteps;
+
+      $('tagLabel').textContent = state.step.tag || 'سناریو — لحظه تصمیم';
+      $('scenarioTitle').textContent = state.step.title;
+      $('scenarioBody').textContent = state.step.body;
+      $('promptHeading').textContent = state.step.prompt || 'چه می‌کنی؟';
+      $('courseTitleLabel').textContent = course ? course.title : courseSlug;
+      $('stepCountLabel').textContent = 'گام ' + toPersianDigits(stepOrder) + ' از ' + toPersianDigits(state.totalSteps);
+      $('progressFill').style.width = Math.round((stepOrder / state.totalSteps) * 100) + '%';
+
+      resumeFromServer(state.step.user_response);
+    }).catch(function(){
+      $('scenarioTitle').textContent = 'اتصال به سرور برقرار نشد.';
+      $('scenarioBody').textContent = 'لطفاً وضعیت اتصال اینترنت را بررسی کنید.';
+    });
+  }
+
+  function fillLessonFromStep(){
+    if(!state.step) return;
+    if(state.step.lesson_title != null) $('lessonTitle').textContent = state.step.lesson_title;
+    applyLessonSummary(state.step.lesson_summary);
+    if(state.step.lesson_body != null) $('lessonBody').textContent = state.step.lesson_body;
+  }
+
+  /* ───────── نمایش کارت‌های واکنش AI و پیوستگی گفتگو ───────── */
+
+  function truncateText(text, max){
+    text = (text || '').trim();
+    if(text.length <= max) return text;
+    return text.slice(0, max).replace(/\s+\S*$/, '') + '…';
+  }
+
+  // حباب نقل‌قول فاز ۲ — کاربر باید ببیند فانوس دارد با «چه» می‌جنگد
+  function showInitialContext(text){
+    var clean = (text || '').trim();
+    var box = $('initialContextQuote');
+    if(!clean){ box.style.display = 'none'; return; }
+    $('initialContextText').textContent = '«' + truncateText(clean, 240) + '»';
+    box.style.display = '';
+  }
+
+  // واکنش AI به پاسخ دوم — قبلاً submitFollowup این را از سرور می‌گرفت و دور می‌ریخت
+  function showFollowupReaction(reaction){
+    var card = $('socraticFollowupCard');
+    var clean = (reaction || '').trim();
+    if(!clean){ card.style.display = 'none'; return; }
+    $('socraticFollowupReaction').textContent = clean;
+    card.style.display = '';
+  }
+
+  // سنتز گرم فاز ۴ — تمرین کاربر دیگر در جشنِ بی‌حال دفن نمی‌شود
+  function showExerciseReaction(reaction){
+    var card = $('exerciseReactionCard');
+    var clean = (reaction || '').trim();
+    if(!clean){ card.style.display = 'none'; return; }
+    $('exerciseReactionText').textContent = clean;
+    card.style.display = '';
+  }
+
+  // خلاصه‌ی فانتوم («به‌زودی کامل می‌شود») بهتر از نبودنش نیست — کلاً پنهان می‌شود
+  function applyLessonSummary(text){
+    var el = $('lessonSummary');
+    var clean = (text || '').trim();
+    if(!clean || /به.?زودی/.test(clean)){
+      el.style.display = 'none';
+      return;
+    }
+    el.textContent = clean;
+    el.style.display = '';
+  }
+
+  function resumeFromServer(userResponse){
+    if(!userResponse){ enterPhase(1); return; }
+    var phase = userResponse.current_phase || 1;
+
+    if(userResponse.is_completed){
+      showExerciseReaction(userResponse.exercise_reaction);
+      enterPhase(4, true);
+      return;
+    }
+    if(phase >= 3){
+      // درس باز شده ولی تمرین هنوز ثبت نشده — از فاز ۳ (کارت درس) شروع کن
+      showFollowupReaction(userResponse.followup_reaction);
+      fillLessonFromStep();
+      showStage('stageLesson', 3);
+      return;
+    }
+    if(phase === 2){
+      showInitialContext(userResponse.initial_response);
+      $('socraticQuestion').textContent = userResponse.socratic_question || '';
+      showStage('stageSocratic', 2);
+      return;
+    }
+    // phase === 1 → پاسخ اولیه هست ولی هنوز سؤال نیامده؛ اجازه‌ی ویرایش و ارسال مجدد
+    enterPhase(1);
+  }
+
+  /* ───────── مدیریت نمایش تک‌مرحله‌ای (Single-Active-Stage) ───────── */
+
+  var STAGE_IDS = ['stageInitial', 'stageSocratic', 'stageLesson', 'stageExercise', 'stageDone'];
+
+  function activeInputSection(){
+    return document.querySelector('.stage-section.active-stage');
+  }
+
+  function updateMobileComposerVisibility(){
+    var composer = $('mobileComposer');
+    var section = activeInputSection();
+    var hasInput = !!(section && section.querySelector('textarea[data-phase]:not(:disabled)'));
+    if(hasInput){ composer.classList.remove('hidden-mobile'); }
+    else { hideMobileComposer(); }
+  }
+
+  /**
+   * فقط بخش stageId را نشان می‌دهد؛ همه‌ی مراحل دیگر کاملاً پنهان می‌شوند.
+   * سناریوی بالای صفحه (عنوان و متن) همیشه به‌عنوان زمینه‌ی خواندن باقی می‌ماند.
+   */
+  function showStage(stageId, newPhase, scroll){
+    hideError();
+
+    STAGE_IDS.forEach(function(id){
+      $(id).classList.remove('active-stage');
+    });
+    $(stageId).classList.add('active-stage');
+
+    state.phase = newPhase;
+    updatePhaseMap();
+
+    if(document.activeElement && document.activeElement.blur){ document.activeElement.blur(); }
+    setActiveTextareaByPhase();
+    updateMobileComposerVisibility();
+    updateMobilePlaceholder();
+
+    if(scroll !== false){
+      setTimeout(function(){
+        $(stageId).scrollIntoView({ behavior:'smooth', block:'start' });
+      }, 80);
+    }
+  }
+
+  function enterPhase(phase, completed){
+    state.completed = !!completed;
+    if(completed){
+      state.phase = 4;
+      showStage('stageDone', 4);
+      lockAllInputs();
+    } else {
+      var stageByPhase = { 1:'stageInitial', 2:'stageSocratic', 3:'stageLesson', 4:'stageExercise' };
+      showStage(stageByPhase[phase] || 'stageInitial', phase);
+    }
+  }
+
+  function hideMobileComposer(){
+    var composer = $('mobileComposer');
+    $('mobileInput').blur();
+    composer.style.bottom = '';
+    composer.classList.add('hidden-mobile');
+  }
+
+  function updatePhaseMap(){
+    [1,2,3,4].forEach(function(n){
+      var item = $('ph' + n);
+      item.classList.remove('active','done');
+      if(state.completed || n < state.phase){ item.classList.add('done'); item.querySelector('.phase-dot').innerHTML = '✓'; }
+      else if(n === state.phase){ item.classList.add('active'); }
+    });
+  }
+
+  function updateMobilePlaceholder(){
+    var map = {
+      1: 'پاسخ خودمانی‌ت رو در ۱-۲ جمله بنویس...',
+      2: 'جواب پرسش فانوس رو بنویس...',
+      4: 'یک اقدام عملی برای همین هفته بنویس...'
+    };
+    $('mobileInput').placeholder = map[state.phase] || map[1];
+  }
+
+  function setActiveTextareaByPhase(){
+    // متن موبایل را با دسکتاپِ فاز فعال همگام کن
+    var section = activeInputSection();
+    var desktop = section && section.querySelector('textarea[data-phase]');
+    var mobile = $('mobileInput');
+    if(desktop && mobile.value !== desktop.value){
+      mobile.value = desktop.value;
+      autoGrow(mobile);
+      syncCount(mobile, 'mobileCount');
+    }
+    if(desktop && !desktop.disabled){ mobile.disabled = false; }
+    else { mobile.disabled = true; }
+    mobileSend.disabled = desktop && !desktop.disabled ? mobile.value.trim().length === 0 : true;
+  }
+
+  function lockAllInputs(){
+    ['desktopInitial','desktopFollowup','desktopExercise','mobileInput'].forEach(function(id){
+      $(id).disabled = true;
+    });
+    ['btnInitial','btnFollowup','btnExercise','mobileSend'].forEach(function(id){
+      $(id).disabled = true;
+    });
+  }
+
+  /* ───────── ارسال‌ها ───────── */
+
+  function getTextForPhase(phase){
+    var desktopId = { 1:'desktopInitial', 2:'desktopFollowup', 4:'desktopExercise' }[phase];
+    var desktopVal = desktopId ? $(desktopId).value.trim() : '';
+    return desktopVal || $('mobileInput').value.trim();
+  }
+
+  function setBusy(phase, busy){
+    state.busy = busy;
+    var btnIds = { 1:['btnInitial','mobileSend'], 2:['btnFollowup','mobileSend'], 4:['btnExercise','mobileSend'] };
+    (btnIds[phase] || []).forEach(function(id){
+      var btn = $(id);
+      btn.disabled = busy;
+      btn.style.opacity = busy ? '0.6' : '';
+    });
+  }
+
+  function postJson(path, payload){
+    return authedFetch(path, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  function submitInitial(){
+    var text = getTextForPhase(1);
+    if(!text || !state.step || state.busy) return;
+    hideError();
+    setBusy(1, true);
+    $('socraticQuestion').parentElement.querySelector('.socratic-label span').textContent = 'فانوس داره فکر می‌کنه...';
+
+    postJson('/steps/' + state.step.id + '/submit-initial', { text:text })
+      .then(function(result){
+        setBusy(1, false);
+        if(!result.ok){
+          $('socraticQuestion').parentElement.querySelector('.socratic-label span').textContent = 'پرسش فانوس';
+          showError((result.data && result.data.detail) || 'ارسال ناموفق بود — دوباره امتحان کن.');
+          return;
+        }
+        $('socraticQuestion').parentElement.querySelector('.socratic-label span').textContent = 'پرسش فانوس';
+        $('socraticQuestion').textContent = result.data.socratic_question;
+        showInitialContext(text);
+        showStage('stageSocratic', 2);
+      })
+      .catch(function(){
+        setBusy(1, false);
+        showError('اتصال برقرار نشد — لطفاً اینترنتت رو بررسی کن.');
+      });
+  }
+
+  function submitFollowup(){
+    var text = getTextForPhase(2);
+    if(!text || !state.step || state.busy) return;
+    hideError();
+    setBusy(2, true);
+
+    postJson('/steps/' + state.step.id + '/submit-followup', { text:text })
+      .then(function(result){
+        setBusy(2, false);
+        if(!result.ok){
+          showError((result.data && result.data.detail) || 'ارسال ناموفق بود — دوباره امتحان کن.');
+          return;
+        }
+        // اتصال داده‌های درس از پاسخ سرور (با جایگزین از داده‌ی گام)
+        var d = result.data || {};
+        $('lessonTitle').textContent = (d.lesson_title != null) ? d.lesson_title : (state.step.lesson_title || '');
+        applyLessonSummary((d.lesson_summary != null) ? d.lesson_summary : (state.step.lesson_summary || ''));
+        $('lessonBody').textContent = (d.lesson_body != null) ? d.lesson_body : (state.step.lesson_body || '');
+        state.step.exercise_prompt = (d.exercise_prompt != null) ? d.exercise_prompt : state.step.exercise_prompt;
+        // واکنشِ واقعی فانوس به پاسخ دوم — دیگر مستقیم به کارت درس نپریدن
+        showFollowupReaction(d.followup_reaction);
+        // فقط فاز ۳ (کارت درس) نمایش داده می‌شود؛ تمرین با دکمه‌ی ادامه باز می‌شود
+        showStage('stageLesson', 3);
+      })
+      .catch(function(){
+        setBusy(2, false);
+        showError('اتصال برقرار نشد — لطفاً اینترنتت رو بررسی کن.');
+      });
+  }
+
+  function submitExercise(){
+    var text = getTextForPhase(4);
+    if(!text || !state.step || state.busy) return;
+    hideError();
+    setBusy(4, true);
+
+    postJson('/steps/' + state.step.id + '/submit-exercise', { text:text })
+      .then(function(result){
+        setBusy(4, false);
+        if(!result.ok){
+          showError((result.data && result.data.detail) || 'ارسال ناموفق بود — دوباره امتحان کن.');
+          return;
+        }
+        // آپدیت نوار پیشرفت
+        var pct = Math.round((state.step.order / state.totalSteps) * 100);
+        $('progressFill').style.width = pct + '%';
+        state.completed = true;
+
+        var nextBtn = $('nextStepBtn');
+        if(result.data.course_completed || !result.data.next_step_order){
+          nextBtn.style.display = 'none';
+        } else {
+          nextBtn.href = 'scenario.html?course=' + encodeURIComponent(courseSlug) + '&step=' + result.data.next_step_order;
+          nextBtn.style.display = '';
+        }
+        // سنتز گرم فانوس روی تمرین — قبل از دکمه‌ی گام بعدی نمایش داده می‌شود
+        showExerciseReaction(result.data.exercise_reaction);
+        showStage('stageDone', 4);
+        lockAllInputs();
+      })
+      .catch(function(){
+        setBusy(4, false);
+        showError('اتصال برقرار نشد — لطفاً اینترنتت رو بررسی کن.');
+      });
+  }
+
+  // فاز ۳ ← ۴: باز کردن تمرین خرد با دکمه‌ی ادامه
+  $('btnGoToExercise').addEventListener('click', function(){
+    if(state.busy) return;
+    $('exercisePromptInline').textContent = (state.step && state.step.exercise_prompt) || '';
+    showStage('stageExercise', 4);
+  });
+
+  /* ───────── اتصال رویدادها ───────── */
+
+  function syncCount(el, countId){
+    var len = el.value.length;
+    var countEl = $(countId);
+    if(countEl){
+      countEl.textContent = toPersianDigits(len) + ' / ۱۵۰۰';
+      countEl.classList.toggle('warn', len > 1300);
+    }
+  }
+
+  function bindDesktopComposer(inputId, countId, btnId, handler){
+    var input = $(inputId), btn = $(btnId);
+    input.addEventListener('input', function(){
+      syncCount(input, countId);
+      btn.disabled = input.value.trim().length === 0;
+      var mobile = $('mobileInput');
+      if(document.activeElement === input && mobile.value !== input.value){ mobile.value = input.value; autoGrow(mobile); }
+    });
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+        e.preventDefault();
+        if(!btn.disabled) handler();
+      }
+    });
+    btn.addEventListener('click', handler);
+  }
+
+  bindDesktopComposer('desktopInitial', 'countInitial', 'btnInitial', submitInitial);
+  bindDesktopComposer('desktopFollowup', 'countFollowup', 'btnFollowup', submitFollowup);
+  bindDesktopComposer('desktopExercise', 'countExercise', 'btnExercise', submitExercise);
+
+  var mobileInput = $('mobileInput'), mobileSend = $('mobileSend');
+
+  function autoGrow(el){
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  mobileInput.addEventListener('input', function(){
+    autoGrow(mobileInput);
+    syncCount(mobileInput, 'mobileCount');
+    mobileSend.disabled = mobileInput.value.trim().length === 0;
+    var section = activeInputSection();
+    var desktop = section && section.querySelector('textarea[data-phase]');
+    if(desktop && desktop.value !== mobileInput.value){ desktop.value = mobileInput.value; }
+  });
+
+  // اندازه‌ی اولیه در صورت بازیابی متن از سرور
+  autoGrow(mobileInput);
+  syncCount(mobileInput, 'mobileCount');
+
+  mobileSend.addEventListener('click', function(){
+    var handler = { 1:submitInitial, 2:submitFollowup, 3:submitExercise, 4:submitExercise }[state.phase];
+    if(handler) handler();
+  });
+
+  // بالا بردن کامپوزر موبایل هنگام باز شدن کیبورد مجازی
+  (function(){
+    var composer = $('mobileComposer');
+    function isComposerActive(){
+      return !composer.classList.contains('hidden-mobile');
+    }
+    function clearLift(){ composer.style.bottom = ''; }
+
+    if(window.visualViewport){
+      var vv = window.visualViewport;
+      function overlap(){
+        return Math.round(window.innerHeight - vv.height - vv.offsetTop);
+      }
+      function liftForKeyboard(){
+        if(!isComposerActive()){ clearLift(); return; }
+        var o = overlap();
+        if(o > 8){ composer.style.bottom = o + 'px'; } else { clearLift(); }
+      }
+      vv.addEventListener('resize', liftForKeyboard);
+      vv.addEventListener('scroll', liftForKeyboard);
+    }
+
+    // Fallback: مرورگرهایی که visualViewport ندارند
+    mobileInput.addEventListener('focus', function(){
+      if(isComposerActive() && !window.visualViewport){
+        setTimeout(function(){
+          composer.style.bottom = (composer.getBoundingClientRect().height * 0.55) + 'px';
+        }, 250);
+      }
+      // اطمینان از اینکه بخش فعال پشت کامپوزر پنهان نمی‌ماند
+      setTimeout(function(){
+        var section = activeInputSection();
+        if(section && section.getBoundingClientRect().bottom > window.innerHeight - 180){
+          section.scrollIntoView({ behavior:'smooth', block:'end' });
+        }
+      }, 300);
+    });
+    mobileInput.addEventListener('blur', clearLift);
+  })();
+
+  // نور محیطی هنگام نوشتن
+  var glow = $('listeningGlow');
+  document.querySelectorAll('textarea').forEach(function(t){
+    t.addEventListener('focus', function(){ glow.classList.add('active'); });
+    t.addEventListener('blur', function(){ glow.classList.remove('active'); });
+  });
+
+  loadStep();
+</script>
+</body>
+</html>

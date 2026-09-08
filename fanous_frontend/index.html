@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فانوس</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#ece4d4;
+    --paper-deep:#e2d8c3;
+    --ink:#2c2820;
+    --ink-soft:#5c5442;
+    --olive:#47502f;
+    --olive-deep:#363c22;
+    --flame:#e0a458;
+    --flame-soft:rgba(224,164,88,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background-color: #f5f0e8;
+    background-image:
+      linear-gradient(rgba(200,180,140,0.45) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,180,140,0.45) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color:var(--ink);
+    font-family:'Vazirmatn',sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  /* پرتوی نرم روی گرید برای حفظ عمق */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(255,252,240,0.65) 0%, transparent 65%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .frame{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    padding:48px 32px;
+    max-width:520px;
+  }
+  .lantern{
+    width:150px;
+    height:auto;
+    margin:0 auto 8px;
+    display:block;
+  }
+  .lantern-path{
+    fill:none;
+    stroke:var(--ink);
+    stroke-width:1.4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  /* پرتوی گرم که با روشن شدن فانوس روی کل صفحه پخش می‌شود */
+  .warm-overlay{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:radial-gradient(circle at 50% 40%, rgba(224,164,88,0.22) 0%, rgba(224,164,88,0.06) 40%, transparent 72%);
+    opacity:0;
+    transition:opacity 1.6s ease;
+  }
+  .warm-overlay.active{ opacity:1; }
+
+  /* مداد در حال کشیدن خطوط */
+  .pencil{
+    opacity:0;
+    transition:opacity 0.25s ease;
+  }
+  .pencil.active{ opacity:1; }
+  .pencil.exit{
+    opacity:0;
+    transition:opacity 0.45s ease, transform 0.45s ease;
+    transform:translate(6px,-6px) scale(0.9);
+  }
+  .pencil-body{
+    fill:none;
+    stroke:var(--ink-soft);
+    stroke-width:1.1;
+    stroke-linecap:round;
+  }
+  .pencil-tip{
+    fill:var(--ink);
+  }
+
+  /* جرقه‌ی اولیه */
+  .spark{
+    opacity:0;
+    transform-origin:103.9px 155px;
+  }
+  .spark.active{
+    animation:sparkFlash 0.5s ease forwards;
+  }
+  @keyframes sparkFlash{
+    0%{ opacity:0; transform:scale(0.2); }
+    35%{ opacity:1; transform:scale(2.6); }
+    100%{ opacity:0; transform:scale(3.4); }
+  }
+
+  /* شکل‌گیری تدریجی شعله */
+  .flame-shape{
+    fill:var(--flame);
+    opacity:0;
+    transform-origin:103.9px 165px;
+    transform:scale(0.15);
+  }
+  .flame-shape.active{
+    animation:flameGrow 1.1s cubic-bezier(.25,.9,.35,1.15) forwards, flicker 4.5s ease-in-out 1.1s infinite;
+  }
+  @keyframes flameGrow{
+    0%{ opacity:0; transform:scale(0.1); }
+    55%{ opacity:1; transform:scale(1.15); }
+    100%{ opacity:1; transform:scale(1); }
+  }
+
+  .flame-glow{
+    opacity:0;
+    transform-origin:center;
+  }
+  .flame-glow.lit{
+    animation:glowIn 1.4s ease forwards, flicker 4.5s ease-in-out 1.4s infinite;
+  }
+  @keyframes glowIn{
+    from{ opacity:0; }
+    to{ opacity:0.85; }
+  }
+  @keyframes flicker{
+    0%,100%{ opacity:0.85; transform:scale(1); }
+    45%{ opacity:1; transform:scale(1.05); }
+    60%{ opacity:0.75; transform:scale(0.97); }
+  }
+
+  /* بازتاب نور روی شیشه‌ی فانوس */
+  .flame-reflection{
+    opacity:0;
+    mix-blend-mode:screen;
+    transition:opacity 1.4s ease;
+  }
+  .flame-reflection.active{ opacity:0.55; }
+
+  /* ذرات نور شناور */
+  .particle{
+    opacity:0;
+    fill:var(--flame);
+  }
+  .particles.active .particle{ animation-play-state:running; }
+  .particles .particle{
+    animation:none;
+  }
+  .particles.active .p1{ animation:floatUp1 4.2s ease-in infinite; animation-delay:0s; }
+  .particles.active .p2{ animation:floatUp2 4.8s ease-in infinite; animation-delay:0.9s; }
+  .particles.active .p3{ animation:floatUp3 3.9s ease-in infinite; animation-delay:1.8s; }
+  .particles.active .p4{ animation:floatUp1 5.2s ease-in infinite; animation-delay:2.5s; }
+  .particles.active .p5{ animation:floatUp2 4.4s ease-in infinite; animation-delay:0.4s; }
+  @keyframes floatUp1{
+    0%{ opacity:0; transform:translate(0,0) scale(0.6); }
+    15%{ opacity:0.9; }
+    100%{ opacity:0; transform:translate(-6px,-95px) scale(0.3); }
+  }
+  @keyframes floatUp2{
+    0%{ opacity:0; transform:translate(0,0) scale(0.5); }
+    18%{ opacity:0.8; }
+    100%{ opacity:0; transform:translate(8px,-105px) scale(0.25); }
+  }
+  @keyframes floatUp3{
+    0%{ opacity:0; transform:translate(0,0) scale(0.7); }
+    20%{ opacity:1; }
+    100%{ opacity:0; transform:translate(-2px,-80px) scale(0.2); }
+  }
+
+  h1{
+    font-size:52px;
+    font-weight:700;
+    color:var(--olive);
+    margin:18px 0 6px;
+    letter-spacing:0.02em;
+    opacity:0;
+    transition:text-shadow 1.4s ease;
+  }
+  h1.show{ animation:fadeUp 0.9s ease forwards; }
+  h1.lit{ text-shadow:0 0 18px rgba(224,164,88,0.55); }
+
+  .tagline{
+    font-size:16px;
+    font-weight:400;
+    color:var(--ink-soft);
+    letter-spacing:0.03em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    margin:0 0 40px;
+    opacity:0;
+  }
+  .tagline.show{ animation:fadeUp 0.9s ease forwards; }
+  .tagline .dash{
+    width:22px;
+    height:1px;
+    background:var(--ink-soft);
+    opacity:0.5;
+  }
+  .cta-group{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .cta{
+    display:inline-block;
+    background:var(--olive-deep);
+    color:var(--paper);
+    font-family:'Vazirmatn',sans-serif;
+    font-size:16px;
+    font-weight:500;
+    padding:15px 42px;
+    border-radius:50px;
+    text-decoration:none;
+    letter-spacing:0.02em;
+    border:none;
+    cursor:pointer;
+    transition:background 0.3s ease, transform 0.2s ease, box-shadow 1.4s ease;
+    opacity:0;
+    box-shadow:0 0 0 rgba(224,164,88,0);
+  }
+  .cta.show{ animation:fadeUp 0.9s ease forwards; }
+  .cta.lit{ box-shadow:0 0 22px rgba(224,164,88,0.45); }
+  .cta:hover{
+    background:var(--olive);
+    transform:translateY(-1px);
+  }
+  .cta-ghost{
+    display:inline-block;
+    background:rgba(255,252,244,0.6);
+    border:1.5px solid var(--ink-soft);
+    color:var(--ink);
+    font-family:'Vazirmatn',sans-serif;
+    font-size:15px;
+    font-weight:500;
+    padding:14px 34px;
+    border-radius:50px;
+    text-decoration:none;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    transition:border-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    opacity:0;
+  }
+  .cta-ghost.show{ animation:fadeUp 0.9s ease 0.15s forwards; }
+  .cta-ghost:hover{
+    border-color:var(--olive);
+    color:var(--olive);
+    transform:translateY(-1px);
+  }
+  @media (max-width:480px){
+    .cta-group{ flex-direction:column; }
+    .cta, .cta-ghost{ width:100%; text-align:center; padding-left:20px; padding-right:20px; }
+  }
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .mark{
+    position:fixed;
+    top:28px;
+    right:36px;
+    font-size:13px;
+    color:var(--ink-soft);
+    opacity:0.55;
+    letter-spacing:0.15em;
+    z-index:1;
+  }
+  .login-link{
+    position:fixed;
+    top:26px;
+    left:36px;
+    font-size:13px;
+    font-weight:400;
+    color:var(--ink-soft);
+    opacity:0;
+    letter-spacing:0.04em;
+    z-index:1;
+    text-decoration:none;
+    border-bottom:1px solid rgba(92,84,66,0.35);
+    padding-bottom:1px;
+    transition:color 0.2s ease, border-color 0.2s ease;
+  }
+  .login-link:hover{color:var(--olive);border-color:var(--olive);}
+  .login-link.show{animation:fadeUp 0.9s ease 3.5s forwards;}
+</style>
+</head>
+<body>
+  <div class="warm-overlay"></div>
+  <div class="mark">فانوس</div>
+  <div class="frame">
+    <svg class="lantern" viewBox="58.7 47.0 90.4 180.9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- هاله نور پشت شعله -->
+      <circle class="flame-glow" cx="103.9" cy="155" r="28" fill="var(--flame-soft)" style="filter:blur(9px)"/>
+      <!-- بازتاب نور روی شیشه‌ی فانوس -->
+      <ellipse class="flame-reflection" cx="103.9" cy="140" rx="22" ry="55" fill="var(--flame-soft)" style="filter:blur(6px)"/>
+      <!-- شعله -->
+      <path class="flame-shape" d="M103.9 138 C 96 150, 94 162, 103.9 174 C 113.8 162, 111.8 150, 103.9 138 Z"/>
+      <!-- جرقه‌ی اولیه -->
+      <circle class="spark" cx="103.9" cy="155" r="2" fill="#fff3d6"/>
+      <!-- طرحِ دست‌کشیده‌ی خودِ کاربر، ترسیم‌شده در Inkscape -->
+      <path d="m 73.2858,110.40148 c 2.45265,-3.56027 1.879954,-11.460268 2.564175,-15.90154 1.536479,-9.97329 4.066293,-20.69801 9.403104,-28.878655 6.933207,-10.62771 20.298211,-15.789913 30.965741,-10.441498 5.65103,2.833278 9.86807,8.582387 12.75366,14.828129 3.08531,6.678028 4.66173,14.490934 5.60274,21.933156 0.25135,1.987915 0.39857,4.232993 0.60038,6.031617 0.0642,0.572069 0.0873,0.860055 0.0897,1.462211 0.005,1.10018 -0.0247,1.57185 0.11167,2.92442 0.0771,0.76466 0.0458,1.11546 0.0446,2.01054 -0.001,0.74643 0.0906,1.37879 -0.29008,1.93198 -1.01074,1.46875 -5.13159,2.02326 -6.57897,2.60823 -0.44943,0.18165 -0.69163,0.17602 -0.86408,0.63281 -0.14985,0.39693 0.15034,1.65157 0.29936,2.68636 0.13877,0.9636 -0.23776,1.65089 -0.84132,1.81719 -0.37619,0.10365 -0.80281,0.0882 -1.20547,0.47923 -0.74347,0.72199 -0.34439,0.98281 -1.44845,1.67671 -3.85959,2.42575 -8.45827,3.8518 -12.64512,5.35298 -8.66471,3.10668 -17.563101,5.58536 -26.384294,7.91874 -4.623166,1.22292 -9.408912,2.20003 -14.050806,3.08831 -1.534606,0.29367 -4.404375,1.37762 -5.587077,0.36766 -0.845434,-0.72196 -1.103427,-2.4236 -1.123799,-3.33707 -0.119301,-5.34982 2.693361,-10.4273 7.023116,-13.48821 1.588348,-1.12288 3.356486,-1.69081 5.151962,-1.97021 0.468151,-0.0729 0.763796,-0.0741 1.248961,-0.0777 0.475425,-0.004 0.765597,-0.0308 1.24896,-0.10507 0.973883,-0.14971 2.171593,-0.0805 3.122402,-0.0774 0.520154,0.002 0.907266,0.19601 1.324852,-0.1626 0.497152,-0.42695 0.365964,-1.18611 0.420655,-1.66531 0.13235,-1.15964 0.8722,-3.40249 1.342681,-4.5694 1.880154,-4.66325 5.276261,-8.327815 9.089177,-10.75123 0.738855,-0.469602 2.561593,-1.47447 3.278521,-1.717477 0.510888,-0.173171 1.131518,-0.139849 1.45929,-0.893845 0.374873,-0.862342 0.144467,-1.01396 0.489438,-1.99066 0.524191,-1.484098 2.542701,-3.199969 3.983831,-3.282644 0.46364,-0.0266 0.76671,-0.0073 1.24896,-0.0073 1.52234,0 4.06856,0.406148 4.87695,1.714375 0.5299,0.857567 -0.46464,1.47755 -1.28618,1.676156 -1.86731,0.451408 -3.77493,0.674289 -5.62033,1.140511 -0.62074,0.156828 -1.81998,0.505201 -2.3418,0.62237 -0.60991,0.136948 -0.909075,0.13889 -1.248958,0.1471 m -0.31224,0.548329 c 0.22224,0.44091 0.226871,1.35574 1.405678,1.677283 0.79139,0.215864 1.78565,0.15048 2.80956,0.15048 3.31168,0 8.67922,-2.245636 12.02125,-0.5716 3.58762,1.797051 7.05377,5.166071 9.42116,8.796531 0.47008,0.72088 1.52271,2.58706 1.72612,3.28998 0.21795,0.75319 -0.0148,1.12508 0.87396,1.46221 m -0.62448,-0.18278 c -0.20235,0.13676 -0.33765,0.28182 -0.93744,0.47739 -0.89554,0.292 -4.08178,1.26277 -5.15124,1.61072 -0.42959,0.13977 -1.06353,0.31467 -1.40448,0.474 -0.80797,0.37759 -0.54942,0.69845 -1.41965,1.24347 -0.46137,0.28896 -1.19407,0.26442 -1.54723,0.32085 -0.98636,0.15765 -2.41908,0.43284 -3.74688,0.44283 -1.50043,0.0113 -4.24939,0.17327 -5.61418,0.65312 -1.32182,0.46472 -0.72248,1.05347 -2.03571,1.4271 -0.79082,0.225 -2.25487,0.54236 -3.1224,0.73266 -3.086903,0.67712 -6.338963,1.22395 -9.211081,1.62609 -0.42651,0.0597 -0.653829,0.11531 -1.09284,0.12791 -0.662844,0.019 -1.109373,0.003 -1.873441,0.003 -1.54505,0 -3.958512,0.42311 -5.420718,-0.88723 -0.547573,-0.49069 -0.509148,-1.42149 -0.511726,-2.03719 -0.0035,-0.84133 -1.19e-4,-1.15534 -1.19e-4,-1.46221 m 34.502535,-0.91388 0.33705,0.35328 c 0.92517,0.77326 1.31447,0.18581 3.25371,0.48304 0.80312,0.12309 1.52685,0.0705 2.49792,0.0777 0.87138,0.007 1.10752,0.1795 1.40508,0.36541 m -41.684055,-0.91389 c 0.373025,0.23306 0.668527,0.35992 1.405081,0.36541 0.856802,0.006 2.915836,1.5e-4 3.903002,1.5e-4 h 10.147804 c 1.255508,0 4.279878,-0.008 5.308078,1.4e-4 1.18345,0.01 1.37982,0.3968 1.71733,0.73096 m 21.38844,-0.91388 c 1.91029,1.19354 5.38907,-0.79572 8.11825,0.62392 4.08173,2.12321 6.3751,8.31419 6.95855,13.0843 0.0697,0.57005 0.0683,0.892 0.0667,1.46221 -0.004,1.34071 -0.31062,3.36044 -1.40737,4.29285 -1.03936,0.88361 -2.57946,0.73726 -3.58835,0.87708 -4.13309,0.57278 -7.73121,0.0102 -12.02125,0.13326 -1.09521,0.0314 -1.62318,0.1801 -2.65404,0.1801 -2.04332,0 -4.54449,0 -6.55704,0 -0.79275,0 -1.1631,0 -2.02956,0 -1.44232,0 -2.18356,0.18268 -3.43464,0.18278 -1.35388,1e-4 -3.53587,0 -4.83972,0 -0.6631,0 -0.97802,-0.001 -1.71733,0 -1.32192,0.002 -1.94084,0.18278 -3.1224,0.18278 -1.844546,0 -2.929383,0 -4.527479,0 -1.728603,0 -2.587692,0.18266 -4.059122,0.18277 -1.445997,1.1e-4 -2.03565,-10e-5 -3.278521,0 -1.375437,1.1e-4 -1.79762,0.18058 -2.966282,0.18278 -1.253801,0.002 -1.836921,-0.10382 -2.966281,0.0522 -0.547845,0.0757 -0.891582,0.12659 -1.40508,0.13045 -0.489943,0.004 -0.740751,-4.1e-4 -1.248961,0.0777 -1.830361,0.28136 -3.859822,0.25828 -5.932563,0.60404 -0.834633,0.13923 -3.866077,0.26623 -4.367026,1.19707 -0.521421,0.96887 -0.0066,2.2229 0.164315,3.42184 0.438516,3.07676 0.836377,6.11097 1.302684,9.13881 1.469905,9.54453 2.492866,19.4031 3.849278,29.06143 0.230683,1.64259 0.48414,3.72686 0.701935,5.30052 0.280152,2.02421 0.778381,0.75837 1.247393,2.74234 0.278809,1.17939 0.168236,3.11996 0.290077,4.20315 0.30191,2.68413 0.91933,7.12864 1.026586,10.0527 m -1.40508,-14.98766 c 0.331083,-0.41921 0.777541,-0.63599 0.7806,-2.37609 0.0022,-1.23418 -0.0028,-1.84156 -0.08372,-2.92442 -0.09341,-1.24968 0.08372,-1.79432 0.08372,-2.92442 0,-0.95098 0,-1.39516 0,-2.19331 0,-0.70431 0,-1.20235 0,-2.01054 0,-6.97948 0,-14.03306 0,-21.01928 0,-3.07686 -0.79143,-6.32284 0.139373,-9.13881 0.464768,-1.40607 1.991884,-2.31712 3.139148,-2.79679 2.117703,-0.88539 5.356775,-1.26403 7.337644,-1.53766 0.902759,-0.1247 1.652972,-0.15087 2.497921,-0.21861 0.607338,-0.0487 0.939169,-0.0163 1.5612,-0.0163 2.502533,0 5.898135,0 8.430481,0 1.10398,0 1.71162,-0.0842 2.96628,0.0163 0.90904,0.0729 1.31732,0.16636 2.18569,0.16643 1.60865,1.2e-4 2.59612,-0.11346 4.21524,0.0163 0.8723,0.0699 1.22616,0.16605 2.02956,0.16642 2.63464,0.001 5.75277,0 8.43048,0 0.94953,0 1.36308,0.0212 2.18568,-0.10521 0.64311,-0.0989 0.95619,-0.0628 1.5612,-0.0802 1.80826,-0.052 3.83771,-0.42432 5.93257,-0.83561 0.91823,-0.18028 2.38102,-0.63695 2.87148,-0.23693 0.35194,0.28706 0.18438,0.84953 0.13696,1.25799 -0.12028,1.03627 -0.3408,2.71867 -0.46656,3.8383 -0.45744,4.07277 -0.894,8.35034 -1.28509,12.42879 -0.59608,6.21623 -1.28872,12.62938 -1.85537,18.82596 -0.73911,8.08228 -1.73394,16.702 -2.51599,24.85758 -0.1661,1.73216 -0.0582,5.29152 -0.93492,6.69079 -0.46556,0.74301 -2.76422,1.48733 -3.28743,1.81423 -0.57737,0.36072 -0.7385,0.69467 -0.93745,1.18212 -1.18954,-0.22165 -1.07772,-4.9e-4 -2.18568,0 -1.18986,5.4e-4 -2.3081,0.0584 -2.81016,0.0979 -0.16484,0.013 -0.65994,-0.14533 -1.24281,0.0361 -0.58855,0.1832 -0.70264,0.59983 -0.96937,0.79146 -0.34643,0.2489 -1.11562,0.29137 -1.44195,0.541 -0.73018,0.5586 -0.51509,0.96421 -2.27843,1.48112 -3.14897,0.92307 -6.5343,1.83593 -9.67945,2.57226 -3.157493,0.73922 -7.202645,1.70878 -10.303921,1.95766 -0.930212,0.0746 -1.209673,-0.10587 -2.029561,0.0969 -0.742504,0.18363 -1.221575,0.28146 -1.873441,0.2849 -1.218611,0.006 -1.924344,1.3e-4 -2.966281,1.3e-4 -1.31207,0 -1.827145,9e-5 -2.966281,0 -0.80104,-5e-5 -1.205834,-0.0347 -1.873441,-0.13073 -1.488711,-0.21405 -3.245371,-0.45445 -4.839722,-0.79866 -0.517887,-0.11181 -0.948027,-0.17983 -1.154759,-0.74197 -0.198052,-0.53854 -0.125476,-1.40739 -0.04337,-1.98416 0.389286,-2.73447 1.569734,-5.44737 4.008286,-5.98395 1.490187,-0.3279 4.529288,-0.73804 5.776442,-0.78132 0.66847,-0.0232 1.253073,-0.49012 2.006559,-0.0845 0.713889,0.38432 0.506447,1.10377 0.866483,1.91478 0.581105,1.30897 2.106878,2.75531 2.795954,4.02108 1.071639,1.96849 0.727201,2.61986 0.419687,3.8383 m 16.548732,-65.98225 c -0.36975,1.3651 -0.43588,3.09396 -1.0037,3.71067 -0.73318,0.7963 -0.94652,0.64673 -1.78671,1.9554 -1.99617,3.10918 -4.709876,6.80499 -6.687505,10.0527 -2.099559,3.44794 -3.903544,7.45061 -4.234156,11.5149 -0.296813,3.64881 1.193493,7.53542 3.720982,10.10221 0.957932,0.97283 3.680109,2.99184 4.526279,3.56667 0.71703,0.48708 0.9539,0.90372 1.24956,1.31878 -1.01022,1.00348 -2.64664,1.09532 -5.620319,1.09666 -0.531479,2.4e-4 -0.891573,-0.001 -1.405081,0.0776 -0.636963,0.0979 -0.977789,0.1051 -1.71732,0.10521 -0.597609,9e-5 -0.875203,-0.021 -1.405081,0.0522 -1.778763,0.24569 -4.351818,0.43871 -6.088683,1.79476 -3.131048,2.44456 -0.856654,8.44227 -0.62448,10.58184 m 20.295614,-52.09124 c 0.57221,1.25506 0.51204,4.84505 1.593,8.04215 1.94399,5.74964 5.1275,10.94097 7.86394,16.08432 0.78489,1.47525 1.67763,3.07955 2.13557,4.75218 0.32329,1.18085 0.52363,2.01217 0.19466,3.28997 -0.64669,2.51196 -3.92791,2.94875 -5.69849,3.09085 -1.00057,0.0803 -1.8835,0.0163 -3.1224,0.0163 -0.86107,0 -1.52608,0.049 -2.3418,-0.0163 -0.68597,-0.055 -1.62133,-0.54114 -2.01125,0.12664 -0.21581,0.36959 -0.0237,1.01095 -0.0213,1.5347 0.008,1.67467 -1.30214,1.46221 -2.02655,1.46221 m 1.87344,0 c 1.15497,0.95428 7.16014,1.73579 9.04088,3.85805 1.50654,1.7 2.67227,4.3124 3.47029,6.5602 0.31224,0.87948 0.67299,2.86802 0.73242,3.65552 0.13105,1.73652 -0.49434,1.87303 -0.9101,2.3761 M 89.678408,198.31688 c 2.216954,2.00047 5.428012,3.8661 7.805879,5.34846 0.7165,0.44666 1.265227,0.88891 1.142838,1.58646 -0.147877,0.84281 -0.828825,0.73651 -1.454954,0.74155 -1.989445,0.016 -5.692961,-0.01 -7.493763,2.7e-4 -0.576913,0.003 -1.563793,0.16631 -2.025712,0.17996 -0.465482,0.0138 -0.605632,0.003 -0.78445,0.003 m 12.177366,-0.54833 c 1.321888,0.0665 2.100708,0.41136 3.434638,0.54833 2.13228,0.21894 3.5805,0.58844 5.77632,1.18424 1.34368,0.36458 1.27425,1.15054 2.03029,1.46912 2.01042,0.84714 3.81397,1.01015 4.21464,1.36772 m -5.4642,-2.55887 c 0.91803,-0.90895 0.95241,-0.94639 3.903,-0.47062 0.61547,0.0992 1.58277,0.21878 2.02956,0.32691 1.40318,0.3396 1.41374,1.07093 1.71732,1.42314 m 6.55704,0 c 1.30314,1.32274 4.45456,1.6588 7.33765,3.52987 1.56707,1.017 1.59037,2.59965 1.83103,4.51229 0.12077,0.95984 0.67922,4.22643 0.29887,4.61651 -0.54251,0.5564 -0.90914,0.31838 -1.81766,0.31845 -0.84771,7e-5 -1.23308,0 -2.02956,0 -2.01071,0 -4.21604,0 -6.24481,0 -1.22553,0 -1.73941,0 -2.81016,0 -0.98247,0 -1.41533,-0.0485 -2.3418,-0.15174 -0.83127,-0.0926 -1.1483,-0.031 -1.87344,-0.031 -0.86087,0 -1.15474,0.005 -1.87344,-0.10522 -0.4994,-0.0768 -0.73961,-0.0738 -1.24896,-0.0777 -0.51164,-0.004 -0.74776,-0.028 -1.24896,-0.10508 -0.94769,-0.14568 -1.97365,-0.21089 -2.96628,-0.26739 -3.0219,-0.17197 -6.20874,-0.84161 -9.367208,-1.09411 -0.671905,-0.0537 -1.62148,-0.20794 -2.341801,-0.30886 -1.704495,-0.2388 -5.191945,0.16024 -6.306721,-0.96395 -0.400773,-0.40417 -0.250322,-1.35188 -0.250322,-2.01266" class="lantern-path"/>
+      <!-- مداد در حال کشیدن -->
+      <g class="pencil">
+        <line class="pencil-body" x1="0" y1="-14" x2="0" y2="-2"/>
+        <path class="pencil-tip" d="M 0,-2 L -1.6,-5 L 1.6,-5 Z"/>
+      </g>
+      <!-- ذرات نور شناور -->
+      <g class="particles">
+        <circle class="particle p1" cx="98" cy="150" r="1.4"/>
+        <circle class="particle p2" cx="106" cy="152" r="1.1"/>
+        <circle class="particle p3" cx="102" cy="148" r="1.7"/>
+        <circle class="particle p4" cx="109" cy="155" r="1"/>
+        <circle class="particle p5" cx="96" cy="156" r="1.3"/>
+      </g>
+    </svg>
+    <h1>فانوس</h1>
+    <div class="tagline">
+      <span class="dash"></span>
+      یادگیری از طریق تجربه و تفکر
+      <span class="dash"></span>
+    </div>
+    <div class="cta-group">
+      <a href="about.html" class="cta-ghost">فانوس چیه و چطور کار می‌کنه؟</a>
+      <a href="auth.html" class="cta">شروع سفر</a>
+    </div>
+  </div>
+  <a href="auth.html?mode=login" class="login-link" id="loginLink">ورود به حساب</a>
+
+  <script>
+    (function(){
+      var path = document.querySelector('.lantern-path');
+      var pencil = document.querySelector('.pencil');
+      var glow = document.querySelector('.flame-glow');
+      var reflection = document.querySelector('.flame-reflection');
+      var flameShape = document.querySelector('.flame-shape');
+      var spark = document.querySelector('.spark');
+      var particles = document.querySelector('.particles');
+      var warmOverlay = document.querySelector('.warm-overlay');
+      var h1 = document.querySelector('h1');
+      var tagline = document.querySelector('.tagline');
+      var cta = document.querySelector('.cta');
+      var ctaGhost = document.querySelector('.cta-ghost');
+
+      var fullD = path.getAttribute('d');
+      var len = path.getTotalLength();
+
+      // مسیر از چند بخش (چند ضربه‌قلم) تشکیل شده؛ بخش اول خطوط اصلی بدنه‌ی فانوسه
+      // و بخش‌های کوچک بعدی فقط جزئیات ریز شیارهای دستی هستن.
+      // این‌جا فقط طول همون بخش اول رو جدا اندازه می‌گیریم تا مداد فقط همون رو دنبال کنه.
+      var chunks = fullD.match(/[Mm][^Mm]*/g) || [fullD];
+      var mainLen = len;
+      if (chunks.length > 1){
+        var measure = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        measure.setAttribute('d', chunks[0]);
+        measure.style.display = 'none';
+        path.parentNode.appendChild(measure);
+        mainLen = measure.getTotalLength();
+        measure.parentNode.removeChild(measure);
+      }
+
+      path.style.strokeDasharray = len + ' ' + len;
+      path.style.strokeDashoffset = len;
+
+      var startDelay = 250;   // مکث کوتاه قبل از شروع کشیدن
+      var drawDuration = 3800; // مدت زمان کشیدنِ خطوط اصلی بدنه (کمی کندتر)
+      var startTime = null;
+
+      function easeInOutQuad(t){
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      }
+
+      function tick(ts){
+        if (startTime === null) startTime = ts;
+        var elapsed = ts - startTime - startDelay;
+
+        if (elapsed < 0){
+          requestAnimationFrame(tick);
+          return;
+        }
+
+        var t = Math.min(elapsed / drawDuration, 1);
+        var eased = easeInOutQuad(t);
+        var currentLength = mainLen * eased;
+
+        path.style.strokeDashoffset = (len - currentLength).toString();
+
+        var point = path.getPointAtLength(currentLength);
+        var lookahead = path.getPointAtLength(Math.min(currentLength + 1.5, mainLen));
+        var angle = Math.atan2(lookahead.y - point.y, lookahead.x - point.x) * 180 / Math.PI;
+        pencil.setAttribute('transform', 'translate(' + point.x.toFixed(2) + ',' + point.y.toFixed(2) + ') rotate(' + (angle + 55).toFixed(1) + ')');
+
+        if (t < 1){
+          requestAnimationFrame(tick);
+        } else {
+          onOutlineComplete();
+        }
+      }
+
+      pencil.classList.add('active');
+      requestAnimationFrame(tick);
+
+      function onOutlineComplete(){
+        // ۱. مداد از صحنه خارج می‌شود
+        pencil.classList.add('exit');
+
+        // ۲. جزئیات ریزِ باقی‌مانده (شیارهای کوچک) بی‌سروصدا و بدون دنبال‌کردنِ مداد ظاهر می‌شوند
+        path.style.transition = 'stroke-dashoffset 0.35s ease';
+        path.style.strokeDashoffset = '0';
+
+        onDrawComplete();
+      }
+
+      function onDrawComplete(){
+        // ۱. مکث کوتاه، سپس جرقه‌ی اولیه
+        setTimeout(function(){
+          spark.classList.add('active');
+        }, 550);
+
+        // ۲. شعله به‌آرامی شکل می‌گیرد
+        setTimeout(function(){
+          flameShape.classList.add('active');
+        }, 700);
+
+        // ۳. هاله‌ی نور و بازتاب آن روی فانوس
+        setTimeout(function(){
+          glow.classList.add('lit');
+          reflection.classList.add('active');
+          warmOverlay.classList.add('active');
+          h1.classList.add('lit');
+          cta.classList.add('lit');
+        }, 1250);
+
+        // ۴. ذرات نور شناور می‌شوند
+        setTimeout(function(){
+          particles.classList.add('active');
+        }, 1500);
+
+        // ۵. عنوان، شعار و دکمه به ترتیب ظاهر می‌شوند
+        setTimeout(function(){ h1.classList.add('show'); }, 1650);
+        setTimeout(function(){ tagline.classList.add('show'); }, 2050);
+        setTimeout(function(){ cta.classList.add('show'); }, 2400);
+        setTimeout(function(){ ctaGhost.classList.add('show'); }, 2550);
+        setTimeout(function(){ document.getElementById('loginLink').classList.add('show'); }, 2800);
+      }
+    })();
+  </script>
+</body>
+</html>
